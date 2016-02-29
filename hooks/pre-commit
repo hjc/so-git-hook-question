@@ -1,0 +1,87 @@
+#!/bin/sh
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+proper_pop() {
+    git reset --hard -q
+    git stash apply -q --index && git stash drop -q
+}
+
+exit_and_pop() {
+    proper_pop
+
+    if [ "$1" -ne 0 ]; then
+        echo "${RED}Your code failed the pre-commit hook! Please examine the output and fix your issues!${NC}"
+    fi
+
+    exit $1
+}
+
+run_and_bail() {
+    bash -c "$1";
+    ret=$?;
+
+    if [ "${ret}" -ne 0 ]; then
+        exit_and_pop "${ret}"
+    fi
+}
+# a change
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
+else
+	# Initial commit: diff against an empty tree object
+	against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+old_stash=$(git rev-parse -q --verify refs/stash)
+git stash -q --keep-index
+new_stash=$(git rev-parse -q --verify refs/stash)
+
+if [ "$old_stash" = "$new_stash" ]; then
+    echo "pre-commit script: No changes to test. Not running."
+    sleep 1  # HACK: Editor may erase message if done too quickly, make the programmer read
+    exit 0
+fi
+
+# If you want to allow non-ASCII filenames set this variable to true.
+allownonascii=$(git config --bool hooks.allownonascii)
+
+# Redirect output to stderr.
+exec 1>&2
+
+# Cross platform projects tend to avoid non-ASCII filenames; prevent
+# them from being added to the repository. We exploit the fact that the
+# printable range starts at the space character and ends with tilde.
+if [ "$allownonascii" != "true" ] &&
+	# Note that the use of brackets around a tr range is ok here, (it's
+	# even required, for portability to Solaris 10's /usr/bin/tr), since
+	# the square bracket bytes happen to fall in the designated range.
+	test $(git diff --cached --name-only --diff-filter=A -z $against |
+	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+then
+	cat <<\EOF
+Error: Attempt to add a non-ASCII file name.
+This can cause problems if you want to work with people on other platforms.
+To be portable it is advisable to rename the file.
+If you know what you are doing you can disable this check using:
+  git config hooks.allownonascii true
+EOF
+	exit_and_pop 1
+fi
+
+if ! [ -z "$(which git-pylint-commit-hook)" ]; then
+    run_and_bail "git-pylint-commit-hook"
+fi
+
+if ! [ -z "$(which pep8)" ]; then
+    run_and_bail "python hooks/pep8-hook-check.py"
+fi
+
+if ! [ -z "$(which npm)" ] && [ -d node_modules ] && [ -z "$NO_ESLINT" ]; then
+    run_and_bail "npm run lint"
+fi
+
+proper_pop
