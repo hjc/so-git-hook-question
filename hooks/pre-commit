@@ -1,14 +1,9 @@
 #!/bin/sh
-
-proper_pop() {
-    git reset --hard -q
-    git stash apply -q --index && git stash drop -q
-}
-
 git rev-parse --verify HEAD >/dev/null 2>&1
 
 old_stash=$(git rev-parse -q --verify refs/stash)
 git stash -q --keep-index
 new_stash=$(git rev-parse -q --verify refs/stash)
 
-proper_pop
+git reset --hard -q
+git stash apply -q --index && git stash drop -q
