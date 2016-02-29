@@ -1,2 +1,3 @@
 #!/bin/sh
+git stash > /dev/null
 git stash apply -q --index && git stash drop -q
