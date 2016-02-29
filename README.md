@@ -18,6 +18,7 @@ printf "asd   \nlklk" >> A
 Commit and let the hooks run:
 
 ```sh
+git add A
 git commit
 ```
 
