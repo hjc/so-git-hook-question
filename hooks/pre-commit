@@ -1,9 +1,2 @@
 #!/bin/sh
-git rev-parse --verify HEAD >/dev/null 2>&1
-
-old_stash=$(git rev-parse -q --verify refs/stash)
-git stash -q --keep-index
-new_stash=$(git rev-parse -q --verify refs/stash)
-
-git reset --hard -q
 git stash apply -q --index && git stash drop -q
