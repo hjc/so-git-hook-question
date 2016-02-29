@@ -72,16 +72,4 @@ EOF
 	exit_and_pop 1
 fi
 
-if ! [ -z "$(which git-pylint-commit-hook)" ]; then
-    run_and_bail "git-pylint-commit-hook"
-fi
-
-if ! [ -z "$(which pep8)" ]; then
-    run_and_bail "python hooks/pep8-hook-check.py"
-fi
-
-if ! [ -z "$(which npm)" ] && [ -d node_modules ] && [ -z "$NO_ESLINT" ]; then
-    run_and_bail "npm run lint"
-fi
-
 proper_pop
